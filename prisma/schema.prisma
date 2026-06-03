@@ -1,0 +1,207 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  SELLER
+  BUYER
+}
+
+enum DimensionType {
+  WEIGHT
+  VOLUME
+  COUNT
+}
+
+enum QuotationStatus {
+  PENDING
+  REVIEWED
+  APPROVED
+  REJECTED
+  CONVERTED_TO_ORDER
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum InventoryTransactionType {
+  STOCK_ADDED
+  STOCK_REMOVED
+  ORDER_APPROVED
+  ORDER_CANCELLED
+  MANUAL_ADJUSTMENT
+}
+
+model User {
+  id               String       @id @default(cuid())
+  clerkId          String       @unique
+  email            String       @unique
+  name             String?
+  role             Role         @default(BUYER)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relations
+  buyerOrders      Order[]      @relation("BuyerOrders")
+  sellerOrders     Order[]      @relation("SellerOrders")
+  buyerQuotations  Quotation[]  @relation("BuyerQuotations")
+  sellerQuotations Quotation[]  @relation("SellerQuotations")
+  products         Product[]    @relation("SellerProducts")
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Product {
+  id                 String                 @id @default(cuid())
+  sku                String                 @unique
+  name               String
+  description        String?
+  categoryId         String
+  category           Category               @relation(fields: [categoryId], references: [id])
+  dimensionType      DimensionType
+  baseUnit           String                 // 'g', 'mL', 'item'
+  pricePerBaseUnit   Decimal                @db.Decimal(38, 18)
+  availableQuantity  Decimal                @db.Decimal(38, 18)
+  density            Decimal?               @db.Decimal(38, 18)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  // Relation to the seller who listed this product
+  sellerId           String?
+  seller             User?                  @relation("SellerProducts", fields: [sellerId], references: [id], onDelete: SetNull)
+
+  // Relations
+  inventory          Inventory?
+  orderItems         OrderItem[]
+  quotationItems     QuotationItem[]
+  transactions       InventoryTransaction[]
+
+  @@map("products")
+}
+
+model Inventory {
+  id         String   @id @default(cuid())
+  productId  String   @unique
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity   Decimal  @db.Decimal(38, 18)
+  location   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("inventory")
+}
+
+model InventoryTransaction {
+  id          String                   @id @default(cuid())
+  productId   String
+  product     Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity    Decimal                  @db.Decimal(38, 18)
+  type        InventoryTransactionType
+  referenceId String?
+  notes       String?
+  createdAt   DateTime                 @default(now())
+
+  @@map("inventory_transactions")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  buyerId     String
+  buyer       User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId    String?
+  seller      User?       @relation("SellerOrders", fields: [sellerId], references: [id])
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(38, 18)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  items       OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id               String   @id @default(cuid())
+  orderId          String
+  order            Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id])
+  quantity         Decimal  @db.Decimal(38, 18) // quantity in base unit
+  unit             String   // e.g. 'kg' or 'L'
+  enteredQuantity  Decimal  @db.Decimal(38, 18) // user-entered quantity
+  pricePerBaseUnit Decimal  @db.Decimal(38, 18)
+  totalPrice       Decimal  @db.Decimal(38, 18)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("order_items")
+}
+
+model Quotation {
+  id          String          @id @default(cuid())
+  buyerId     String
+  buyer       User            @relation("BuyerQuotations", fields: [buyerId], references: [id])
+  sellerId    String?
+  seller      User?           @relation("SellerQuotations", fields: [sellerId], references: [id])
+  status      QuotationStatus @default(PENDING)
+  totalAmount Decimal         @db.Decimal(38, 18)
+  validUntil  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  items       QuotationItem[]
+
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id               String   @id @default(cuid())
+  quotationId      String
+  quotation        Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id])
+  quantity         Decimal  @db.Decimal(38, 18) // quantity in base unit
+  unit             String   // e.g. 'kg' or 'L'
+  enteredQuantity  Decimal  @db.Decimal(38, 18) // user-entered quantity
+  pricePerBaseUnit Decimal  @db.Decimal(38, 18)
+  totalPrice       Decimal  @db.Decimal(38, 18)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("quotation_items")
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  actorId       String?
+  actor         User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action        String   // "ROLE_CHANGE", "PRODUCT_CREATE", "PRODUCT_UPDATE", "PRODUCT_DELETE", "INVENTORY_ADJUST", "QUOTATION_CREATE", "QUOTATION_STATUS_CHANGE", "ORDER_CREATE", "ORDER_STATUS_CHANGE"
+  targetType    String   // "USER", "PRODUCT", "INVENTORY", "QUOTATION", "ORDER"
+  targetId      String
+  previousValue String?  @db.Text
+  newValue      String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  @@map("audit_logs")
+}
