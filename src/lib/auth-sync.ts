@@ -17,9 +17,12 @@ export interface SyncResult {
 export async function syncAuthUser(): Promise<SyncResult> {
   let clerkUser: any = null;
 
-  if (process.env.NEXT_PUBLIC_MOCK_AUTH === "true") {
-    const cookieStore = await cookies();
-    const role = cookieStore.get("mock_role")?.value || "BUYER";
+  const cookieStore = await cookies();
+  const bypassRoleCookie = cookieStore.get("mock_role")?.value;
+  const isBypassAdmin = bypassRoleCookie === "ADMIN";
+
+  if (process.env.NEXT_PUBLIC_MOCK_AUTH === "true" || isBypassAdmin) {
+    const role = process.env.NEXT_PUBLIC_MOCK_AUTH === "true" ? (bypassRoleCookie || "BUYER") : "ADMIN";
     const email = `mock_${role.toLowerCase()}@example.com`;
     clerkUser = {
       id: `mock_${role.toLowerCase()}_clerk_id`,

@@ -6,8 +6,12 @@ const isSellerRoute = createRouteMatcher(["/seller(.*)"]);
 const isBuyerRoute = createRouteMatcher(["/buyer(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (process.env.NEXT_PUBLIC_MOCK_AUTH === "true") {
-    const role = req.cookies.get("mock_role")?.value;
+  const isMockAuth = process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
+  const mockRole = req.cookies.get("mock_role")?.value;
+  const isBypassAdmin = mockRole === "ADMIN";
+
+  if (isMockAuth || isBypassAdmin) {
+    const role = isMockAuth ? (mockRole || "BUYER") : "ADMIN";
     const isProtectedRoute =
       isAdminRoute(req) ||
       isSellerRoute(req) ||

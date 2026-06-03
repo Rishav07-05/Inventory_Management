@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SignOutButton } from "@clerk/nextjs";
+import { useClerk } from "@clerk/nextjs";
 import {
   LayoutDashboard,
   Package,
@@ -27,6 +27,18 @@ interface SidebarProps {
 }
 
 export default function DashboardSidebar({ role, userName, userEmail }: SidebarProps) {
+  const { signOut } = useClerk();
+
+  const handleSignOut = async () => {
+    // Clear mock cookies
+    document.cookie = "mock_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    try {
+      await signOut();
+    } catch (e) {
+      window.location.href = "/sign-in";
+    }
+  };
+
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -131,12 +143,13 @@ export default function DashboardSidebar({ role, userName, userEmail }: SidebarP
 
         {/* Footer Logout */}
         <div className="border-t border-slate-800 p-4">
-          <div className="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800/40 hover:text-slate-100 transition cursor-pointer">
-            <span className="flex items-center gap-3">
-              <LogOut className="h-5 w-5 text-slate-400" />
-              <SignOutButton redirectUrl="/sign-in" />
-            </span>
-          </div>
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-slate-800/40 hover:text-slate-100 transition cursor-pointer text-left"
+          >
+            <LogOut className="h-5 w-5 text-slate-400" />
+            <span>Sign Out</span>
+          </button>
         </div>
       </aside>
 
