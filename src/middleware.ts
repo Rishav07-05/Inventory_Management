@@ -1,9 +1,9 @@
 import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
-const isSellerRoute = createRouteMatcher(["/seller(.*)"]);
-const isBuyerRoute = createRouteMatcher(["/buyer(.*)"]);
+const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
+const isSellerRoute = createRouteMatcher(["/seller", "/seller/(.*)"]);
+const isBuyerRoute = createRouteMatcher(["/buyer", "/buyer/(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const isMockAuth = process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
