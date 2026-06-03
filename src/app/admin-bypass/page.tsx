@@ -1,21 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
 export default function AdminBypassPage() {
-  const router = useRouter();
 
   useEffect(() => {
     // Set the cookie for routing in middleware and server actions
     document.cookie = "mock_role=ADMIN; path=/; max-age=31536000";
-    // Redirect to the admin dashboard
-    router.push("/admin/dashboard/1weirdroute4Lxyz");
-    // Trigger window reload to ensure all Server Components reload with new cookie
-    setTimeout(() => {
-      window.location.reload();
-    }, 150);
-  }, [router]);
+    // Redirect directly via hard navigation to avoid reload loops and ensure server components read the cookie
+    window.location.href = "/admin/dashboard/1weirdroute4Lxyz";
+  }, []);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
